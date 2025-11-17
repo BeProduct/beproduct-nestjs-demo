@@ -42,65 +42,61 @@ export class BeProductOidcStrategy extends PassportStrategy(
       callbackURL: configService.get<string>('OIDC_CALLBACK_URL')!,
       scope: configService.get<string>('OIDC_SCOPES')!.split(' '),
       skipUserProfile: false,
-      passReqToCallback: false,
+      passReqToCallback: true, // Enable request in callback to access tokens
     });
   }
 
   async validate(
+    req: any,
     issuer: string,
-    profile: BeProductProfile,
+    profile: any,
     context: any,
     idToken: string,
     accessToken: string,
     refreshToken: string,
-    done: (err: any, user?: any) => void,
+    done: any,
   ): Promise<any> {
-    try {
-      const profileData = profile._json;
+    console.log('=== VALIDATE CALLED WITH passReqToCallback ===');
+    console.log('Total arguments:', arguments.length);
+    console.log('Access token (arg 5):', accessToken ? 'YES' : 'NO');
+    console.log('Refresh token (arg 6):', refreshToken ? 'YES' : 'NO');
 
-      // Parse BeProduct-specific userinfo JSON string
-      let userInfo: BeProductUserInfo = {
-        FirstName: '',
-        LastName: '',
-        Culture: 'en',
-      };
+    console.log('BeProduct profile received:', JSON.stringify(profile, null, 2));
 
-      try {
-        if (profileData.userinfo) {
-          userInfo = JSON.parse(profileData.userinfo);
-        }
-      } catch (error) {
-        console.error('Failed to parse userinfo JSON:', error);
-      }
+    // Extract email from emails array
+    const email = profile.emails && profile.emails.length > 0
+      ? profile.emails[0].value
+      : null;
 
-      // Build full name from FirstName + LastName
-      const fullName =
-        userInfo.FirstName && userInfo.LastName
-          ? `${userInfo.FirstName} ${userInfo.LastName}`.trim()
-          : profileData.preferred_username || profileData.email;
-
-      // Map BeProduct profile to internal user format
-      const oidcUser: OidcUserDto = {
-        externalId: profileData.sub,
-        email: profileData.email,
-        name: fullName,
-        firstName: userInfo.FirstName,
-        lastName: userInfo.LastName,
-        emailVerified: profileData.email_verified || false,
-        locale: userInfo.Culture || 'en',
-        company: profileData.company,
-        provider: 'beproduct-oidc',
-        accessToken: '', // Not stored for security
-        refreshToken: '', // Not stored for security
-      };
-
-      // Create or update user via AuthService
-      const user = await this.authService.findOrCreateOidcUser(oidcUser);
-
-      return done(null, user);
-    } catch (error) {
-      console.error('BeProduct OIDC validation error:', error);
-      return done(error, null);
+    if (!email) {
+      throw new Error('No email found in BeProduct profile');
     }
+
+    // Use username as name if available
+    const name = profile.username || profile.displayName || email.split('@')[0];
+
+    // Map BeProduct profile to internal user format
+    const oidcUser: OidcUserDto = {
+      externalId: profile.id,
+      email: email,
+      name: name,
+      firstName: '',
+      lastName: '',
+      emailVerified: true,
+      locale: 'en',
+      company: '', // Company field not available in BeProduct profile
+      provider: 'beproduct-oidc',
+      accessToken: accessToken || '',
+      refreshToken: refreshToken || '',
+    };
+
+    console.log('Mapped OIDC user:', oidcUser);
+
+    // Create or update user via AuthService
+    const user = await this.authService.findOrCreateOidcUser(oidcUser);
+
+    console.log('User created/updated:', user);
+
+    return user;
   }
 }

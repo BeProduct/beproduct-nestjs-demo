@@ -5,4 +5,6 @@ export interface User {
   name: string;
   company?: string;
   locale?: string;
+  accessToken?: string;
+  refreshToken?: string;
 }

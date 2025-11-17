@@ -36,6 +36,8 @@ export class AuthService {
       user.company = oidcUser.company;
       user.locale = oidcUser.locale;
       user.emailVerified = oidcUser.emailVerified;
+      user.accessToken = oidcUser.accessToken;
+      user.refreshToken = oidcUser.refreshToken;
       user.lastLoginAt = new Date();
       this.users.set(user.id, user);
       return user;
@@ -57,6 +59,8 @@ export class AuthService {
       user.company = oidcUser.company;
       user.locale = oidcUser.locale;
       user.emailVerified = oidcUser.emailVerified;
+      user.accessToken = oidcUser.accessToken;
+      user.refreshToken = oidcUser.refreshToken;
       user.lastLoginAt = new Date();
       this.users.set(user.id, user);
       return user;
@@ -75,6 +79,8 @@ export class AuthService {
       locale: oidcUser.locale,
       emailVerified: oidcUser.emailVerified,
       provider: oidcUser.provider,
+      accessToken: oidcUser.accessToken,
+      refreshToken: oidcUser.refreshToken,
       createdAt: new Date(),
       lastLoginAt: new Date(),
     };
@@ -101,6 +107,8 @@ export class AuthService {
       name: user.name,
       company: user.company,
       locale: user.locale,
+      accessToken: user.accessToken,
+      refreshToken: user.refreshToken,
     };
 
     return this.jwtService.sign(payload);

@@ -9,6 +9,8 @@ export interface User {
   locale?: string;
   emailVerified: boolean;
   provider: string;
+  accessToken?: string;
+  refreshToken?: string;
   createdAt: Date;
   lastLoginAt: Date;
 }

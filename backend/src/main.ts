@@ -1,10 +1,27 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
+import session from 'express-session';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // Set global API prefix
+  app.setGlobalPrefix('api');
+
+  // Enable session for OAuth state management
+  app.use(
+    session({
+      secret: process.env.APP_SECRET || 'a-very-secret-key-min-32-chars-long',
+      resave: false,
+      saveUninitialized: false,
+      cookie: {
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 600000, // 10 minutes - just for OAuth state
+      },
+    }),
+  );
 
   // Enable cookie parser for JWT authentication
   app.use(cookieParser());

@@ -5,6 +5,8 @@ export interface JwtPayload {
   name: string;
   company?: string;
   locale?: string;
+  accessToken?: string;
+  refreshToken?: string;
   iat?: number;
   exp?: number;
 }

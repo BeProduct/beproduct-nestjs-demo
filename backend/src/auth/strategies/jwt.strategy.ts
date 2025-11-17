@@ -38,6 +38,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       name: payload.name,
       company: payload.company,
       locale: payload.locale,
+      accessToken: payload.accessToken,
+      refreshToken: payload.refreshToken,
     };
   }
 }
