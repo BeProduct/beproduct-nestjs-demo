@@ -224,33 +224,66 @@ Response:
 ## Tech Stack
 
 ### Backend
-- NestJS - Progressive Node.js framework
-- TypeScript - Type-safe development
-- Passport.js - Authentication middleware
+- **[@beproduct/nestjs-auth](https://www.npmjs.com/package/@beproduct/nestjs-auth)** - BeProduct OIDC authentication module
+- **NestJS** - Progressive Node.js framework
+- **TypeScript** - Type-safe development
+- **Passport.js** - Authentication middleware (used by package)
   - passport-openidconnect - OpenID Connect strategy
-- @nestjs/jwt - Token-based authentication
-- cookie-parser - httpOnly cookie handling
-- express-session - OAuth state management
+  - passport-jwt - JWT authentication strategy
+- **@nestjs/jwt** - Token-based authentication
+- **cookie-parser** - httpOnly cookie handling
 
 ### Frontend
-- React 18 - UI library
-- TypeScript - Type safety
-- Vite - Fast build tool and dev server
-- React Router - Client-side routing
-- Axios - HTTP client with cookie support
+- **React 18** - UI library with hooks
+- **TypeScript** - Type safety
+- **Vite** - Fast build tool and dev server
+- **React Router** - Client-side routing
+- **Axios** - HTTP client with cookie support
 
 ## Authentication Flow
 
+### How It Works
+
+The backend uses the `@beproduct/nestjs-auth` package which provides:
+- `BeProductOidcStrategy` - Handles OpenID Connect authentication with BeProduct IDS
+- `BeProductJwtStrategy` - Validates JWT tokens from httpOnly cookies
+- `BeProductAuthModule` - Module configuration with async factory support
+
+### Login Sequence
+
 1. **User initiates login** → Frontend redirects to `/api/auth/beproduct`
-2. **OAuth redirect** → Backend redirects to BeProduct IDS authorization page
-3. **User authenticates** → BeProduct IDS redirects back to `/api/auth/callback/beproduct`
-4. **Token exchange** → Backend exchanges authorization code for tokens
-5. **User validation** → `validateOidcUser()` processes BeProduct profile and tokens
-6. **User storage** → User created/updated with tokens stored server-side
-7. **JWT generation** → Small JWT created (without BeProduct tokens)
-8. **Cookie set** → JWT stored in httpOnly cookie
-9. **Redirect to dashboard** → Frontend displays user info
-10. **Token retrieval** → Frontend calls `/api/auth/me` to get full user data with tokens
+2. **OIDC redirect** → Package's `BeProductOidcStrategy` redirects to BeProduct IDS
+3. **User authenticates** → User logs in at BeProduct IDS
+4. **Callback** → BeProduct IDS redirects to `/api/auth/callback/beproduct`
+5. **Token exchange** → Package exchanges authorization code for access/refresh tokens
+6. **User object creation** → Package's strategy returns `BeProductUser` with tokens
+7. **Custom persistence** → Controller calls `authService.validateOidcUser()` to store user
+8. **JWT generation** → `authService.generateAccessToken()` creates small JWT
+9. **Cookie set** → JWT stored in httpOnly cookie
+10. **Dashboard redirect** → Frontend displays user info
+11. **Token retrieval** → Frontend calls `/api/auth/me` to get full user data with tokens
+
+### Package Integration
+
+```typescript
+// auth.module.ts - Uses the npm package
+BeProductAuthModule.forRootAsync({
+  imports: [ConfigModule],
+  useFactory: (configService: ConfigService) => ({
+    issuer: configService.get('OIDC_ISSUER'),
+    authorizationURL: configService.get('OIDC_AUTHORIZATION_URL'),
+    tokenURL: configService.get('OIDC_TOKEN_URL'),
+    userInfoURL: configService.get('OIDC_USERINFO_URL'),
+    clientID: configService.get('OIDC_CLIENT_ID'),
+    clientSecret: configService.get('OIDC_CLIENT_SECRET'),
+    callbackURL: configService.get('OIDC_CALLBACK_URL'),
+    scope: configService.get('OIDC_SCOPES').split(' '),
+    jwtSecret: configService.get('JWT_SECRET'),
+    jwtExpiration: '30d',
+  }),
+  inject: [ConfigService],
+})
+```
 
 ## Development
 
@@ -271,16 +304,60 @@ npm run build        # Build for production
 npm run preview      # Preview production build
 ```
 
+## Using the Package in Your Own App
+
+To integrate BeProduct authentication into your own NestJS application:
+
+### 1. Install the Package
+
+```bash
+npm install @beproduct/nestjs-auth
+```
+
+### 2. Configure Your Module
+
+```typescript
+import { BeProductAuthModule } from '@beproduct/nestjs-auth';
+
+@Module({
+  imports: [
+    BeProductAuthModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
+        issuer: 'https://id.winks.io/ids',
+        authorizationURL: 'https://id.winks.io/ids/connect/authorize',
+        tokenURL: 'https://id.winks.io/ids/connect/token',
+        userInfoURL: 'https://id.winks.io/ids/connect/userinfo',
+        clientID: configService.get('OIDC_CLIENT_ID'),
+        clientSecret: configService.get('OIDC_CLIENT_SECRET'),
+        callbackURL: 'http://localhost:3000/api/auth/callback/beproduct',
+        scope: ['openid', 'profile', 'email', 'BeProductPublicApi'],
+        jwtSecret: configService.get('JWT_SECRET'),
+        jwtExpiration: '30d',
+      }),
+      inject: [ConfigService],
+    }),
+  ],
+})
+export class AppModule {}
+```
+
+### 3. Create Auth Endpoints
+
+See `backend/src/auth/auth.controller.ts` for a complete example.
+
+For detailed documentation, visit the [package repository](https://github.com/BeProduct/beproduct-org-nestjs-auth).
+
 ## Production Considerations
 
-1. **Token Storage**: Replace in-memory Map with Redis or database
-2. **Session Management**: Consider using Redis for session storage
-3. **HTTPS**: Enable secure cookies in production
-4. **Environment Variables**: Use proper secret management
-5. **CORS**: Configure specific allowed origins
-6. **Token Refresh**: Implement automatic token refresh logic
-7. **Error Handling**: Add comprehensive error handling and logging
-8. **Rate Limiting**: Implement rate limiting on auth endpoints
+1. **Token Storage**: Replace in-memory Map with Redis or database (see `AuthService` for reference)
+2. **HTTPS**: Enable secure cookies in production (`NODE_ENV=production`)
+3. **Environment Variables**: Use proper secret management (AWS Secrets Manager, HashiCorp Vault, etc.)
+4. **CORS**: Configure specific allowed origins (update `main.ts`)
+5. **Token Refresh**: Implement automatic token refresh logic using BeProduct refresh tokens
+6. **Error Handling**: Add comprehensive error handling and logging
+7. **Rate Limiting**: Implement rate limiting on auth endpoints
+8. **Session Storage**: Consider Redis for distributed session management
 
 ## Troubleshooting
 
@@ -298,11 +375,25 @@ This application solves the HTTP 431 error by keeping JWT tokens small. BeProduc
 - Check that callback URL matches BeProduct IDS configuration
 - Ensure all required scopes are included
 
+## Package Versions
+
+- **@beproduct/nestjs-auth**: v0.1.1
+  - Supports NestJS v10 and v11
+  - Published to npm: https://www.npmjs.com/package/@beproduct/nestjs-auth
+  - Source code: https://github.com/BeProduct/beproduct-org-nestjs-auth
+
+## Related Links
+
+- **BeProduct IDS**: https://id.winks.io/ids
+- **OpenID Connect Spec**: https://openid.net/connect/
+- **NestJS Documentation**: https://docs.nestjs.com
+
 ## License
 
 MIT
 
 ## Support
 
-For issues related to BeProduct IDS, please contact BeProduct support.
-For application issues, please open an issue in this repository.
+- **Package Issues**: Open an issue at https://github.com/BeProduct/beproduct-org-nestjs-auth/issues
+- **BeProduct IDS Support**: Contact BeProduct support
+- **Example App Issues**: Open an issue in this repository

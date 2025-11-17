@@ -1,13 +1,17 @@
 # Frontend - BeProduct OAuth
 
-React + TypeScript + Vite frontend for OAuth authentication.
+React + TypeScript + Vite frontend for BeProduct OpenID Connect (OIDC) authentication.
+
+This frontend works with a NestJS backend that uses the [@beproduct/nestjs-auth](https://www.npmjs.com/package/@beproduct/nestjs-auth) package.
 
 ## Features
 
-- OAuth login with Google and GitHub
+- BeProduct OIDC authentication with automatic login redirect
+- Secure httpOnly cookie-based sessions
+- User profile dashboard with access/refresh tokens
 - React Router for navigation
 - TypeScript for type safety
-- Axios for API calls
+- Axios for API calls with cookie support
 - Modern UI with Vite's fast HMR
 
 ## Getting Started
@@ -52,100 +56,93 @@ npm run preview
 ```
 src/
 ├── api/
-│   └── axios.ts          # Axios configuration
+│   └── axios.ts          # Axios instance with credentials support
 ├── pages/
-│   ├── Home.tsx          # Landing page
-│   ├── Login.tsx         # Login with OAuth providers
-│   ├── Dashboard.tsx     # Protected user dashboard
-│   └── Callback.tsx      # OAuth callback handler
-├── App.tsx               # Routes configuration
-└── main.tsx              # App entry point
+│   ├── Login.tsx         # Login page with BeProduct OIDC button
+│   └── Dashboard.tsx     # User dashboard showing profile + tokens
+├── types/
+│   └── user.ts           # User type definitions
+├── App.tsx               # Routes and navigation
+└── main.tsx              # Application entry point
 ```
 
-## OAuth Flow
+## Authentication Flow
 
-1. User clicks "Login with Google/GitHub" on `/login`
-2. Redirected to backend OAuth endpoint
-3. User authenticates with provider
-4. Provider redirects to backend callback
-5. Backend processes auth and redirects to frontend `/auth/callback` with token
-6. Frontend stores token and redirects to `/dashboard`
+This application demonstrates BeProduct OIDC authentication using the [@beproduct/nestjs-auth](https://www.npmjs.com/package/@beproduct/nestjs-auth) npm package.
+
+### Login Flow
+
+1. User clicks **"Sign in with BeProduct"** on `/login`
+2. Frontend redirects to backend: `GET /api/auth/beproduct`
+3. Backend (using `@beproduct/nestjs-auth`) redirects to BeProduct IDS authorization page
+4. User authenticates with BeProduct
+5. BeProduct redirects back to backend callback: `GET /api/auth/callback/beproduct`
+6. Backend:
+   - Receives profile + access/refresh tokens from BeProduct
+   - Stores user with tokens in server-side storage (in-memory Map for this demo)
+   - Generates a small JWT (~200 bytes) containing only user metadata (id, email, name)
+   - Sets JWT in httpOnly cookie
+   - Redirects to frontend `/dashboard`
+7. Frontend displays user info and access/refresh tokens (fetched from `/api/auth/me`)
+
+### Token Architecture
+
+**Why separate JWT and BeProduct tokens?**
+
+- **JWT in httpOnly cookie**: Contains only user metadata (id, email, name, company, locale)
+  - Small size (~200 bytes) prevents HTTP 431 errors
+  - Used for session authentication
+  - Cannot be accessed by JavaScript (XSS protection)
+
+- **BeProduct access/refresh tokens**: Stored server-side
+  - Retrieved via `/api/auth/me` when needed
+  - Used to call BeProduct APIs on behalf of the user
+  - Not sent in every request (reduces overhead)
+
+This architecture solves the "cookie too large" problem while maintaining security.
 
 ## Available Routes
 
 - `/` - Home page
-- `/login` - Login page with OAuth buttons
-- `/dashboard` - Protected dashboard (requires authentication)
-- `/auth/callback` - OAuth callback handler
+- `/login` - Login page with "Sign in with BeProduct" button
+- `/dashboard` - Protected dashboard showing user profile and BeProduct tokens
+
+## API Endpoints
+
+The frontend communicates with these backend endpoints:
+
+- `GET /api/auth/beproduct` - Initiate BeProduct OIDC login
+- `GET /api/auth/callback/beproduct` - OAuth callback (handled by backend)
+- `GET /api/auth/me` - Get current user with access/refresh tokens (requires auth cookie)
+- `POST /api/auth/logout` - Clear auth cookie and logout
 
 ## Tech Stack
 
-Currently, two official plugins are available:
+- **React 18** - UI library with hooks
+- **TypeScript** - Type safety
+- **Vite** - Fast build tool and dev server
+- **React Router** - Client-side routing
+- **Axios** - HTTP client with cookie support (`withCredentials: true`)
+- **@vitejs/plugin-react** - React Fast Refresh via Babel
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Security Features
 
-## React Compiler
+### httpOnly Cookies
+- JWT stored in httpOnly cookies (not accessible to JavaScript)
+- Prevents XSS attacks
+- Automatically sent with requests via `withCredentials: true`
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### CORS Configuration
+- Backend allows credentials from `http://localhost:5173` in development
+- Configure `FRONTEND_URL` in backend `.env` for production
 
-## Expanding the ESLint configuration
+### Token Storage
+- BeProduct access/refresh tokens stored server-side (not in frontend)
+- Only exposed via authenticated `/api/auth/me` endpoint
+- Reduces attack surface
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Learn More
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
-
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+- **Backend Package**: [@beproduct/nestjs-auth](https://www.npmjs.com/package/@beproduct/nestjs-auth)
+- **BeProduct IDS**: [https://id.winks.io/ids](https://id.winks.io/ids)
+- **Full Example**: See the main [project README](../README.md)
