@@ -30,7 +30,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('Invalid token payload');
     }
 
-    // Return user data that will be attached to request.user
+    // Return basic user data from JWT
+    // Note: accessToken/refreshToken are not in JWT, they're fetched from storage
     return {
       id: payload.sub,
       externalId: payload.externalId,
@@ -38,8 +39,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       name: payload.name,
       company: payload.company,
       locale: payload.locale,
-      accessToken: payload.accessToken,
-      refreshToken: payload.refreshToken,
     };
   }
 }

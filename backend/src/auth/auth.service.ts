@@ -17,6 +17,53 @@ export class AuthService {
   ) {}
 
   /**
+   * Validate OIDC user and return user object with tokens
+   */
+  async validateOidcUser(
+    profile: any,
+    accessToken: string,
+    refreshToken: string,
+  ): Promise<User> {
+    console.log('BeProduct profile received:', JSON.stringify(profile, null, 2));
+
+    // Extract email from emails array
+    const email = profile.emails && profile.emails.length > 0
+      ? profile.emails[0].value
+      : null;
+
+    if (!email) {
+      throw new Error('No email found in BeProduct profile');
+    }
+
+    // Use username as name if available
+    const name = profile.username || profile.displayName || email.split('@')[0];
+
+    // Map BeProduct profile to internal user format
+    const oidcUser: OidcUserDto = {
+      externalId: profile.id,
+      email: email,
+      name: name,
+      firstName: '',
+      lastName: '',
+      emailVerified: true,
+      locale: 'en',
+      company: '', // Company field not available in BeProduct profile
+      provider: 'beproduct-oidc',
+      accessToken: accessToken || '',
+      refreshToken: refreshToken || '',
+    };
+
+    console.log('Mapped OIDC user:', oidcUser);
+
+    // Create or update user via existing method
+    const user = await this.findOrCreateOidcUser(oidcUser);
+
+    console.log('User created/updated:', user);
+
+    return user;
+  }
+
+  /**
    * Find or create user from OAuth provider (BeProduct)
    * Auto-registers new users
    */
@@ -96,8 +143,9 @@ export class AuthService {
     return this.users.get(userId) || null;
   }
 
+
   /**
-   * Generate JWT access token
+   * Generate JWT access token (WITHOUT BeProduct tokens to keep it small)
    */
   generateAccessToken(user: User): string {
     const payload: JwtPayload = {
@@ -107,8 +155,8 @@ export class AuthService {
       name: user.name,
       company: user.company,
       locale: user.locale,
-      accessToken: user.accessToken,
-      refreshToken: user.refreshToken,
+      // NOTE: BeProduct tokens NOT included - keeps JWT small (~200 bytes)
+      // Tokens are fetched from storage via /auth/me endpoint
     };
 
     return this.jwtService.sign(payload);

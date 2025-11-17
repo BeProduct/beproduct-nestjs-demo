@@ -10,7 +10,7 @@ async function bootstrap() {
   // Set global API prefix
   app.setGlobalPrefix('api');
 
-  // Enable session for OAuth state management
+  // Enable session for OAuth state management only
   app.use(
     session({
       secret: process.env.APP_SECRET || 'a-very-secret-key-min-32-chars-long',
@@ -18,7 +18,7 @@ async function bootstrap() {
       saveUninitialized: false,
       cookie: {
         secure: process.env.NODE_ENV === 'production',
-        maxAge: 600000, // 10 minutes - just for OAuth state
+        maxAge: 600000, // 10 minutes for OAuth state
       },
     }),
   );

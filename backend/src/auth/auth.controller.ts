@@ -46,10 +46,10 @@ export class AuthController {
       return res.redirect(`${frontendUrl}/login?error=oauth_failed`);
     }
 
-    // Generate JWT token
+    // Generate small JWT token (does NOT include BeProduct tokens)
     const token = this.authService.generateAccessToken(user);
 
-    // Set httpOnly cookie
+    // Set httpOnly cookie with JWT
     this.setAuthCookie(res, token);
 
     // Redirect to frontend dashboard
@@ -64,7 +64,16 @@ export class AuthController {
   @Get('me')
   @UseGuards(AuthGuard('jwt'))
   async getCurrentUser(@Req() req: Request) {
-    return req.user;
+    const jwtUser = req.user as any;
+
+    // Fetch full user from storage (includes BeProduct accessToken/refreshToken)
+    const fullUser = await this.authService.findById(jwtUser.id);
+
+    if (!fullUser) {
+      return jwtUser; // Fallback to JWT data if user not found
+    }
+
+    return fullUser;
   }
 
   /**

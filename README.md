@@ -1,87 +1,109 @@
-# BeProduct OAuth Application
+# BeProduct OAuth NestJS Application
 
-Full-stack OAuth authentication application using BeProduct IDS (Identity Server) with OpenID Connect.
+A full-stack application demonstrating BeProduct OpenID Connect (OIDC) authentication with NestJS backend and React frontend.
+
+## Features
+
+- BeProduct OIDC authentication integration
+- JWT-based session management with httpOnly cookies
+- **Secure token storage** - Access & refresh tokens stored server-side
+- Small JWT payload (~200 bytes) prevents HTTP 431 errors
+- React frontend with TypeScript and Vite
+- CORS-enabled API communication
+- Automatic server startup script
+- Auto-registration for new users
+
+## Architecture
+
+### Backend (NestJS)
+- **Port**: 3000
+- **API Prefix**: `/api`
+- **Authentication Strategy**: JWT + BeProduct OIDC
+- **Token Storage**: In-memory (Map-based, suitable for prototyping)
+- **Key Feature**: BeProduct access/refresh tokens stored server-side, NOT in JWT
+
+### Frontend (React + Vite)
+- **Port**: 5173
+- **Framework**: React 18 with TypeScript
+- **Build Tool**: Vite
 
 ## Project Structure
 
 ```
 beproduct-oauth-nestjs/
-├── backend/                    # NestJS API server
+├── backend/
 │   ├── src/
-│   │   ├── auth/              # OAuth authentication module
-│   │   │   ├── strategies/    # BeProduct OIDC & JWT strategies
-│   │   │   ├── dto/           # Data transfer objects
-│   │   │   └── interfaces/    # User interfaces
-│   │   └── ...
-│   ├── .env.example
+│   │   ├── auth/
+│   │   │   ├── strategies/
+│   │   │   │   ├── beproduct-oidc.strategy.ts
+│   │   │   │   └── jwt.strategy.ts
+│   │   │   ├── interfaces/
+│   │   │   │   └── user.interface.ts
+│   │   │   ├── dto/
+│   │   │   │   ├── jwt-payload.dto.ts
+│   │   │   │   └── oidc-user.dto.ts
+│   │   │   ├── auth.controller.ts
+│   │   │   ├── auth.service.ts
+│   │   │   └── auth.module.ts
+│   │   ├── app.module.ts
+│   │   └── main.ts
+│   ├── .env
 │   └── package.json
-│
-├── frontend/                   # React + TypeScript + Vite
+├── frontend/
 │   ├── src/
-│   │   ├── pages/            # Home, Login, Dashboard
-│   │   ├── hooks/            # useAuth hook
-│   │   └── types/            # User types
+│   │   ├── components/
+│   │   ├── pages/
+│   │   │   ├── Login.tsx
+│   │   │   └── Dashboard.tsx
+│   │   ├── types/
+│   │   │   └── user.ts
+│   │   └── App.tsx
 │   └── package.json
-│
-└── start-all.sh              # Start both servers
+├── start-all.sh
+├── generate-secrets.sh
+└── README.md
 ```
 
-## Features
+## Prerequisites
 
-- **BeProduct OAuth (OIDC)** - Single Sign-On with BeProduct IDS
-- **httpOnly Cookie Authentication** - Secure JWT token storage
-- **Auto-Registration** - New users automatically created on first login
-- **In-Memory User Storage** - No database required (for prototyping)
-- **React Frontend** - Modern UI with hooks and TypeScript
-- **CORS Enabled** - Frontend-backend communication configured
+- Node.js (v20 or higher)
+- npm
+- BeProduct IDS account and client credentials
 
-## Quick Start
+## Installation
 
-### Backend Setup
-
+1. **Install backend dependencies**
 ```bash
 cd backend
 npm install
-
-# Copy and configure environment variables
-cp .env.example .env
-# Edit .env with your OAuth credentials
-
-# Run in development mode
-npm run start:dev
 ```
 
-The API will run on `http://localhost:3000`
-
-### Frontend Setup
-
+2. **Install frontend dependencies**
 ```bash
 cd frontend
 npm install
-npm run dev
 ```
 
-The frontend will run on `http://localhost:5173`
+3. **Generate secure secrets**
 
-### Quick Start (Both Servers)
+Run the secret generator script to create secure JWT_SECRET and APP_SECRET:
 
 ```bash
-# From root directory
-./start-all.sh
+./generate-secrets.sh
 ```
 
-This will start both backend (port 3000) and frontend (port 5173) servers.
+This will:
+- Generate cryptographically secure random secrets
+- Display them in the terminal
+- Optionally update `backend/.env` automatically (with backup)
 
-## Environment Variables
+4. **Configure environment variables**
 
-### Backend (.env)
+The `backend/.env` file should contain:
 
-Required BeProduct OIDC configuration (already set in `.env`):
-
-```bash
-# BeProduct OAuth
+```env
+# BeProduct OIDC Configuration
 OIDC_ENABLED=true
-OIDC_PROVIDER_NAME=BeProduct
 OIDC_CLIENT_ID=nextjs
 OIDC_CLIENT_SECRET=Hj348793dejkSW
 OIDC_ISSUER=https://id.winks.io/ids
@@ -89,73 +111,139 @@ OIDC_AUTHORIZATION_URL=https://id.winks.io/ids/connect/authorize
 OIDC_TOKEN_URL=https://id.winks.io/ids/connect/token
 OIDC_USERINFO_URL=https://id.winks.io/ids/connect/userinfo
 OIDC_SCOPES=openid profile email roles offline_access BeProductPublicApi
-OIDC_CALLBACK_URL=http://localhost:3000/auth/callback/beproduct
+OIDC_CALLBACK_URL=http://localhost:3000/api/auth/callback/beproduct
 
-# JWT (change this!)
-JWT_SECRET=your-jwt-secret-key-change-this-min-32-chars
+# Application Configuration
+APP_SECRET=<generated-by-script>
+NODE_ENV=development
+PORT=3000
+FRONTEND_URL=http://localhost:5173
+
+# JWT Configuration
+JWT_SECRET=<generated-by-script>
 JWT_EXPIRATION=30d
 ```
 
-### Frontend (.env)
+**Important**:
+- `JWT_SECRET`: Signs your authentication tokens (30-day lifetime)
+- `APP_SECRET`: Signs OAuth session cookies (10-minute lifetime)
+- Both should be different, secure, random strings (64+ characters)
+
+## Running the Application
+
+### Option 1: Start Both Servers (Recommended)
 
 ```bash
-VITE_API_URL=http://localhost:3000
+./start-all.sh
 ```
 
-## BeProduct OAuth Setup
+This will:
+- Clear any existing processes on ports 3000 and 5173
+- Build and start the backend on http://localhost:3000
+- Start the frontend on http://localhost:5173
+- Handle graceful shutdown with Ctrl+C
 
-This application uses **BeProduct IDS** (Identity Server) for authentication.
+### Option 2: Start Servers Separately
 
-- **Base URL**: https://id.winks.io
-- **Client ID**: nextjs (shared with Docmost)
-- **Client Secret**: Hj348793dejkSW
-- **Scopes**: openid, profile, email, roles, offline_access, BeProductPublicApi
+**Backend:**
+```bash
+cd backend
+npm run build
+npm run start:dev
+```
 
-The OAuth credentials are already configured. No additional setup required.
+**Frontend:**
+```bash
+cd frontend
+npm run dev
+```
+
+## Usage
+
+1. Open your browser and navigate to http://localhost:5173
+2. Click "Sign in with BeProduct"
+3. You'll be redirected to BeProduct IDS for authentication
+4. After successful login, you'll be redirected back to the dashboard
+5. The dashboard displays your user information including access and refresh tokens
 
 ## API Endpoints
 
-### Authentication
-- `GET /auth/beproduct` - Initiate BeProduct OAuth flow
-- `GET /auth/callback/beproduct` - OAuth callback (handled by backend)
-- `GET /auth/me` - Get current user (requires JWT cookie)
-- `POST /auth/logout` - Logout and clear cookie
+### Authentication Routes
 
-### Other
-- `GET /` - Health check
+- `GET /api/auth/beproduct` - Initiate BeProduct OAuth flow
+- `GET /api/auth/callback/beproduct` - OAuth callback handler
+- `GET /api/auth/me` - Get current authenticated user (requires JWT)
+- `POST /api/auth/logout` - Logout and clear auth cookie
+
+### Example: Get Current User
+
+```bash
+curl http://localhost:3000/api/auth/me \
+  -H "Cookie: authToken=your_jwt_token"
+```
+
+Response:
+```json
+{
+  "id": "uuid",
+  "externalId": "beproduct_user_id",
+  "email": "user@example.com",
+  "name": "John Doe",
+  "company": "Example Corp",
+  "locale": "en",
+  "emailVerified": true,
+  "provider": "beproduct-oidc",
+  "accessToken": "beproduct_access_token",
+  "refreshToken": "beproduct_refresh_token",
+  "createdAt": "2025-11-17T...",
+  "lastLoginAt": "2025-11-17T..."
+}
+```
+
+## Security Features
+
+### JWT Cookie Strategy
+- **Small JWT payload** (~200 bytes) - contains only user metadata (id, email, name, company, locale)
+- **httpOnly cookies** - prevents XSS attacks
+- **Secure flag** - enabled in production (HTTPS only)
+- **SameSite** - set to 'lax' for CSRF protection
+
+### Token Storage
+- BeProduct access and refresh tokens are **NOT stored in JWT**
+- Tokens stored server-side in User object
+- Retrieved via `/api/auth/me` endpoint when needed
+- Prevents HTTP 431 "Request Header Fields Too Large" errors
 
 ## Tech Stack
 
 ### Backend
-- **NestJS** - Progressive Node.js framework
-- **TypeScript** - Type-safe development
-- **Passport.js** - Authentication middleware
-  - `passport-openidconnect` - OpenID Connect strategy
-- **JWT** - Token-based authentication (@nestjs/jwt)
-- **Cookie Parser** - httpOnly cookie handling
-- **Class Validator** - Request validation
+- NestJS - Progressive Node.js framework
+- TypeScript - Type-safe development
+- Passport.js - Authentication middleware
+  - passport-openidconnect - OpenID Connect strategy
+- @nestjs/jwt - Token-based authentication
+- cookie-parser - httpOnly cookie handling
+- express-session - OAuth state management
 
 ### Frontend
-- **React 18** - UI library
-- **TypeScript** - Type safety
-- **Vite** - Fast build tool and dev server
-- **React Router** - Client-side routing
-- **Axios** - HTTP client with cookie support
+- React 18 - UI library
+- TypeScript - Type safety
+- Vite - Fast build tool and dev server
+- React Router - Client-side routing
+- Axios - HTTP client with cookie support
 
-## OAuth Flow
+## Authentication Flow
 
-1. User clicks "Sign in with BeProduct IDS" on `/login`
-2. Frontend redirects to backend `/auth/beproduct`
-3. Backend initiates OAuth flow, redirects to BeProduct IDS
-4. User authenticates at https://id.winks.io
-5. BeProduct IDS redirects back to `/auth/callback/beproduct` with code
-6. Backend exchanges code for tokens
-7. Backend fetches user profile from BeProduct
-8. Backend creates/updates user (auto-registration)
-9. Backend generates JWT and sets httpOnly cookie
-10. Backend redirects to frontend `/dashboard`
-11. Frontend calls `/auth/me` to get user from JWT cookie
-12. User sees dashboard with profile info
+1. **User initiates login** → Frontend redirects to `/api/auth/beproduct`
+2. **OAuth redirect** → Backend redirects to BeProduct IDS authorization page
+3. **User authenticates** → BeProduct IDS redirects back to `/api/auth/callback/beproduct`
+4. **Token exchange** → Backend exchanges authorization code for tokens
+5. **User validation** → `validateOidcUser()` processes BeProduct profile and tokens
+6. **User storage** → User created/updated with tokens stored server-side
+7. **JWT generation** → Small JWT created (without BeProduct tokens)
+8. **Cookie set** → JWT stored in httpOnly cookie
+9. **Redirect to dashboard** → Frontend displays user info
+10. **Token retrieval** → Frontend calls `/api/auth/me` to get full user data with tokens
 
 ## Development
 
@@ -176,22 +264,38 @@ npm run build        # Build for production
 npm run preview      # Preview production build
 ```
 
-## Security Features
+## Production Considerations
 
-- **httpOnly Cookies** - Prevents XSS attacks (JavaScript cannot access tokens)
-- **CORS Protection** - Only allows requests from configured frontend URL
-- **Secure Cookies** - HTTPS-only in production
-- **SameSite Policy** - CSRF protection
-- **JWT Expiration** - 30-day token validity
-- **Auto-Registration Control** - Can be disabled via env var
+1. **Token Storage**: Replace in-memory Map with Redis or database
+2. **Session Management**: Consider using Redis for session storage
+3. **HTTPS**: Enable secure cookies in production
+4. **Environment Variables**: Use proper secret management
+5. **CORS**: Configure specific allowed origins
+6. **Token Refresh**: Implement automatic token refresh logic
+7. **Error Handling**: Add comprehensive error handling and logging
+8. **Rate Limiting**: Implement rate limiting on auth endpoints
 
-## Notes
+## Troubleshooting
 
-- Users are stored in-memory (Map) - data is lost on server restart
-- For production, integrate a database (PostgreSQL, MongoDB, etc.)
-- Change `JWT_SECRET` before deploying
-- BeProduct IDS credentials are shared with Docmost application
+### Port Already in Use
+```bash
+lsof -ti:3000 | xargs kill -9
+lsof -ti:5173 | xargs kill -9
+```
+
+### HTTP 431 Error
+This application solves the HTTP 431 error by keeping JWT tokens small. BeProduct access/refresh tokens are stored server-side, not in the JWT payload.
+
+### OAuth Errors
+- Verify your BeProduct client credentials in `.env`
+- Check that callback URL matches BeProduct IDS configuration
+- Ensure all required scopes are included
 
 ## License
 
 MIT
+
+## Support
+
+For issues related to BeProduct IDS, please contact BeProduct support.
+For application issues, please open an issue in this repository.

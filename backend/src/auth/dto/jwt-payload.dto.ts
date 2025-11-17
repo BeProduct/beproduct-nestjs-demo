@@ -5,8 +5,8 @@ export interface JwtPayload {
   name: string;
   company?: string;
   locale?: string;
-  accessToken?: string;
-  refreshToken?: string;
+  // Note: accessToken and refreshToken are NOT included here
+  // They're too large for JWT cookies and are stored server-side only
   iat?: number;
   exp?: number;
 }
