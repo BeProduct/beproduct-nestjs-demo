@@ -27,14 +27,26 @@ A full-stack application demonstrating BeProduct OpenID Connect (OIDC) authentic
 - **Framework**: React 18 with TypeScript
 - **Build Tool**: Vite
 
+## npm Package
+
+This example application demonstrates BeProduct OIDC authentication. The authentication module is also available as an npm package:
+
+**[@beproduct/nestjs-auth](https://www.npmjs.com/package/@beproduct/nestjs-auth)**
+
+```bash
+npm install @beproduct/nestjs-auth
+```
+
+See the [package documentation](https://github.com/BeProduct/beproduct-org-nestjs-auth) for integration instructions.
+
 ## Project Structure
 
 ```
 beproduct-oauth-nestjs/
-├── backend/
+├── backend/                    # Example NestJS backend
 │   ├── src/
 │   │   ├── auth/
-│   │   │   ├── strategies/
+│   │   │   ├── strategies/     # Local BeProduct OIDC & JWT strategies
 │   │   │   │   ├── beproduct-oidc.strategy.ts
 │   │   │   │   └── jwt.strategy.ts
 │   │   │   ├── interfaces/
@@ -49,7 +61,7 @@ beproduct-oauth-nestjs/
 │   │   └── main.ts
 │   ├── .env
 │   └── package.json
-├── frontend/
+├── frontend/                   # Example React frontend
 │   ├── src/
 │   │   ├── components/
 │   │   ├── pages/
@@ -59,6 +71,8 @@ beproduct-oauth-nestjs/
 │   │   │   └── user.ts
 │   │   └── App.tsx
 │   └── package.json
+├── packages/
+│   └── beproduct-nestjs-auth/  # npm package source
 ├── start-all.sh
 ├── generate-secrets.sh
 └── README.md
