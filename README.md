@@ -18,6 +18,7 @@ A full-stack application demonstrating BeProduct OpenID Connect (OIDC) authentic
 ### Backend (NestJS)
 - **Port**: 3000
 - **API Prefix**: `/api`
+- **Authentication**: Uses [@beproduct/nestjs-auth](https://www.npmjs.com/package/@beproduct/nestjs-auth) npm package
 - **Authentication Strategy**: JWT + BeProduct OIDC
 - **Token Storage**: In-memory (Map-based, suitable for prototyping)
 - **Key Feature**: BeProduct access/refresh tokens stored server-side, NOT in JWT
@@ -29,34 +30,26 @@ A full-stack application demonstrating BeProduct OpenID Connect (OIDC) authentic
 
 ## npm Package
 
-This example application demonstrates BeProduct OIDC authentication. The authentication module is also available as an npm package:
-
-**[@beproduct/nestjs-auth](https://www.npmjs.com/package/@beproduct/nestjs-auth)**
+The backend uses the **[@beproduct/nestjs-auth](https://www.npmjs.com/package/@beproduct/nestjs-auth)** package, which provides ready-to-use BeProduct OIDC authentication for NestJS applications.
 
 ```bash
 npm install @beproduct/nestjs-auth
 ```
 
-See the [package documentation](https://github.com/BeProduct/beproduct-org-nestjs-auth) for integration instructions.
+This example application serves as a complete working demonstration of the package. See the [package documentation](https://github.com/BeProduct/beproduct-org-nestjs-auth) for detailed integration instructions and API reference.
 
 ## Project Structure
 
 ```
 beproduct-oauth-nestjs/
-├── backend/                    # Example NestJS backend
+├── backend/                    # Example NestJS backend using @beproduct/nestjs-auth
 │   ├── src/
 │   │   ├── auth/
-│   │   │   ├── strategies/     # Local BeProduct OIDC & JWT strategies
-│   │   │   │   ├── beproduct-oidc.strategy.ts
-│   │   │   │   └── jwt.strategy.ts
 │   │   │   ├── interfaces/
-│   │   │   │   └── user.interface.ts
-│   │   │   ├── dto/
-│   │   │   │   ├── jwt-payload.dto.ts
-│   │   │   │   └── oidc-user.dto.ts
-│   │   │   ├── auth.controller.ts
-│   │   │   ├── auth.service.ts
-│   │   │   └── auth.module.ts
+│   │   │   │   └── user.interface.ts  # App-specific User model
+│   │   │   ├── auth.controller.ts     # Login/callback/me endpoints
+│   │   │   ├── auth.service.ts        # User storage & JWT generation
+│   │   │   └── auth.module.ts         # Uses BeProductAuthModule.forRootAsync()
 │   │   ├── app.module.ts
 │   │   └── main.ts
 │   ├── .env
@@ -72,7 +65,7 @@ beproduct-oauth-nestjs/
 │   │   └── App.tsx
 │   └── package.json
 ├── packages/
-│   └── beproduct-nestjs-auth/  # npm package source
+│   └── beproduct-nestjs-auth/  # npm package source (@beproduct/nestjs-auth)
 ├── start-all.sh
 ├── generate-secrets.sh
 └── README.md

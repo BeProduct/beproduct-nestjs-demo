@@ -38,13 +38,29 @@ export class AuthController {
   @Get('callback/beproduct')
   @UseGuards(AuthGuard('beproduct-oidc'))
   async oidcCallback(@Req() req: Request, @Res() res: Response) {
-    const user = req.user as User;
+    // Package returns BeProductUser from OIDC strategy
+    const beproductUser = req.user as any;
 
-    if (!user) {
+    if (!beproductUser) {
       // Redirect to login with error
       const frontendUrl = this.configService.get('FRONTEND_URL');
       return res.redirect(`${frontendUrl}/login?error=oauth_failed`);
     }
+
+    // Create profile object compatible with validateOidcUser
+    const profile = {
+      id: beproductUser.id,
+      emails: [{ value: beproductUser.email }],
+      username: beproductUser.name,
+      displayName: beproductUser.name,
+    };
+
+    // Persist user with tokens in our storage
+    const user = await this.authService.validateOidcUser(
+      profile,
+      beproductUser.accessToken || '',
+      beproductUser.refreshToken || '',
+    );
 
     // Generate small JWT token (does NOT include BeProduct tokens)
     const token = this.authService.generateAccessToken(user);
@@ -62,7 +78,7 @@ export class AuthController {
    * Protected route - requires authentication
    */
   @Get('me')
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('beproduct-jwt'))
   async getCurrentUser(@Req() req: Request) {
     const jwtUser = req.user as any;
 

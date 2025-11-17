@@ -1,27 +1,29 @@
 import { Module } from '@nestjs/common';
-import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { PassportModule } from '@nestjs/passport';
+import { BeProductAuthModule } from '@beproduct/nestjs-auth';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
-import { BeProductOidcStrategy } from './strategies/beproduct-oidc.strategy';
-import { JwtStrategy } from './strategies/jwt.strategy';
 
 @Module({
   imports: [
-    PassportModule,
-    JwtModule.registerAsync({
+    BeProductAuthModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET'),
-        signOptions: {
-          expiresIn: configService.get<string>('JWT_EXPIRATION') || '30d',
-        } as any,
+        issuer: configService.get<string>('OIDC_ISSUER')!,
+        authorizationURL: configService.get<string>('OIDC_AUTHORIZATION_URL')!,
+        tokenURL: configService.get<string>('OIDC_TOKEN_URL')!,
+        userInfoURL: configService.get<string>('OIDC_USERINFO_URL')!,
+        clientID: configService.get<string>('OIDC_CLIENT_ID')!,
+        clientSecret: configService.get<string>('OIDC_CLIENT_SECRET')!,
+        callbackURL: configService.get<string>('OIDC_CALLBACK_URL')!,
+        scope: configService.get<string>('OIDC_SCOPES')!.split(' '),
+        jwtSecret: configService.get<string>('JWT_SECRET')!,
+        jwtExpiration: configService.get<string>('JWT_EXPIRATION') || '30d',
       }),
       inject: [ConfigService],
     }),
   ],
-  providers: [AuthService, BeProductOidcStrategy, JwtStrategy],
+  providers: [AuthService],
   controllers: [AuthController],
   exports: [AuthService],
 })

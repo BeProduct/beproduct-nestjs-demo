@@ -3,8 +3,30 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { v4 as uuidv4 } from 'uuid';
 import { User } from './interfaces/user.interface';
-import { OidcUserDto } from './dto/oidc-user.dto';
-import { JwtPayload } from './dto/jwt-payload.dto';
+
+// Internal DTOs for auth service
+interface OidcUserDto {
+  externalId: string;
+  email: string;
+  name: string;
+  firstName: string;
+  lastName: string;
+  emailVerified: boolean;
+  locale: string;
+  company: string;
+  provider: string;
+  accessToken: string;
+  refreshToken: string;
+}
+
+interface JwtPayload {
+  sub: string;
+  externalId: string;
+  email: string;
+  name: string;
+  company?: string;
+  locale?: string;
+}
 
 @Injectable()
 export class AuthService {
