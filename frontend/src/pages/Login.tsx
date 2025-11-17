@@ -1,50 +1,59 @@
+import { useSearchParams } from 'react-router-dom';
+
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 function Login() {
-  const handleGoogleLogin = () => {
-    window.location.href = `${API_URL}/auth/google`;
-  };
+  const [searchParams] = useSearchParams();
+  const error = searchParams.get('error');
 
-  const handleGithubLogin = () => {
-    window.location.href = `${API_URL}/auth/github`;
+  const handleBeProductLogin = () => {
+    window.location.href = `${API_URL}/auth/beproduct`;
   };
 
   return (
     <div className="container">
       <h1>Login</h1>
-      <p>Choose your preferred login method:</p>
+      <p>Sign in with your BeProduct account</p>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxWidth: '300px', margin: '2rem auto' }}>
+      {error && (
+        <div style={{
+          padding: '1rem',
+          marginBottom: '1rem',
+          backgroundColor: '#fee',
+          color: '#c33',
+          borderRadius: '4px',
+          maxWidth: '400px',
+          margin: '1rem auto'
+        }}>
+          {error === 'oauth_failed' ? 'Authentication failed. Please try again.' : 'An error occurred during login.'}
+        </div>
+      )}
+
+      <div style={{ maxWidth: '400px', margin: '2rem auto' }}>
         <button
-          onClick={handleGoogleLogin}
+          onClick={handleBeProductLogin}
           style={{
-            padding: '0.75rem 1.5rem',
-            fontSize: '1rem',
-            backgroundColor: '#4285f4',
+            width: '100%',
+            padding: '1rem 2rem',
+            fontSize: '1.1rem',
+            backgroundColor: '#0066cc',
             color: 'white',
             border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer'
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontWeight: '600',
+            transition: 'background-color 0.2s'
           }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0052a3'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#0066cc'}
         >
-          Login with Google
-        </button>
-
-        <button
-          onClick={handleGithubLogin}
-          style={{
-            padding: '0.75rem 1.5rem',
-            fontSize: '1rem',
-            backgroundColor: '#24292e',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}
-        >
-          Login with GitHub
+          Sign in with BeProduct IDS
         </button>
       </div>
+
+      <p style={{ marginTop: '2rem', fontSize: '0.9rem', color: '#666' }}>
+        You will be redirected to BeProduct IDS to authenticate
+      </p>
     </div>
   );
 }

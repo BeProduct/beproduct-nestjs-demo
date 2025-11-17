@@ -3,7 +3,6 @@ import './App.css'
 import Home from './pages/Home'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
-import Callback from './pages/Callback'
 
 function App() {
   return (
@@ -11,7 +10,6 @@ function App() {
       <Route path="/" element={<Home />} />
       <Route path="/login" element={<Login />} />
       <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="/auth/callback" element={<Callback />} />
     </Routes>
   )
 }
